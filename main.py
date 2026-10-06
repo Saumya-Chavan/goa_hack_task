@@ -1,8 +1,9 @@
 from fastapi import FastAPI
+import models
 from database import Base, engine
 from routers import health
 
-# Create all database tables
+# Create all database tables on startup
 Base.metadata.create_all(bind=engine)
 
 # Initialize FastAPI app
