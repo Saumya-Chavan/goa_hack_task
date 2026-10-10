@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Store Management & Analytics Dashboard</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- React 18 and Babel Standalone CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const API_BASE = window.location.origin;
+
+    function App() {
+      const [activeTab, setActiveTab] = useState('products');
+      const [healthStatus, setHealthStatus] = useState('checking');
+      const [toast, setToast] = useState(null);
+
+      const showToast = (message, type = 'success') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 4000);
+      };
+
+      useEffect(() => {
+        fetch(`${API_BASE}/health`)
+          .then(res => res.json())
+          .then(data => setHealthStatus(data.status || 'healthy'))
+          .catch(() => setHealthStatus('offline'));
+      }, []);
+
+      return (
+        <div class="min-h-screen flex flex-col bg-slate-950">
+          {/* Top Navigation Bar */}
+          <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                  <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h1 class="font-bold text-lg text-white tracking-tight flex items-center gap-2">
+                      GOA Store <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">FastAPI + React</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Inventory & Analytics Platform</p>
+                  </div>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                  {/* Health status badge */}
+                  <div class="flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-xs">
+                    <span class={`w-2 h-2 rounded-full ${healthStatus === 'healthy' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`}></span>
+                    <span class="text-slate-300 capitalize">API: {healthStatus}</span>
+                  </div>
+                  <a href="/docs" target="_blank" class="text-xs text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1 font-medium">
+                    Docs (Swagger) ↗
+                  </a>
+                </div>
+              </div>
+
+              {/* Tabs Navigation */}
+              <div class="flex space-x-1 border-t border-slate-800/80 py-2">
+                {[
+                  { id: 'products', label: 'Products', icon: '📦' },
+                  { id: 'customers', label: 'Customers', icon: '👥' },
+                  { id: 'orders', label: 'Orders', icon: '🛒' },
+                  { id: 'analytics', label: 'Analytics', icon: '📊' },
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    id={`tab-${tab.id}`}
+                    onClick={() => setActiveTab(tab.id)}
+                    class={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 flex items-center gap-2 ${
+                      activeTab === tab.id
+                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    }`}
+                  >
+                    <span>{tab.icon}</span>
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </header>
+
+          {/* Toast Notification */}
+          {toast && (
+            <div class="fixed top-20 right-6 z-50 animate-bounce">
+              <div class={`px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 text-sm font-medium border ${
+                toast.type === 'error'
+                  ? 'bg-rose-950/90 text-rose-200 border-rose-800'
+                  : 'bg-emerald-950/90 text-emerald-200 border-emerald-800'
+              }`}>
+                <span>{toast.type === 'error' ? '⚠️' : '✅'}</span>
+                <span>{toast.message}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Tab Content Body */}
+          <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+            {activeTab === 'products' && <ProductsTab showToast={showToast} />}
+            {activeTab === 'customers' && <CustomersTab showToast={showToast} />}
+            {activeTab === 'orders' && <OrdersTab showToast={showToast} />}
+            {activeTab === 'analytics' && <AnalyticsTab showToast={showToast} />}
+          </main>
+
+          {/* Footer */}
+          <footer class="border-t border-slate-900 bg-slate-950/90 py-4 text-center text-xs text-slate-500">
+            Powered by FastAPI, SQLite, React 18 & Tailwind CSS
+          </footer>
+        </div>
+      );
+    }
+
+    /* ==============================================================
+       1. PRODUCTS TAB COMPONENT
+       ============================================================== */
+    function ProductsTab({ showToast }) {
+      const [products, setProducts] = useState([]);
+      const [total, setTotal] = useState(0);
+      const [page, setPage] = useState(1);
+      const [limit, setLimit] = useState(10);
+      const [category, setCategory] = useState('');
+      const [maxPrice, setMaxPrice] = useState('');
+      const [loading, setLoading] = useState(false);
+
+      // Create product form modal state
+      const [showModal, setShowModal] = useState(false);
+      const [newProduct, setNewProduct] = useState({ name: '', category: '', price: '', stock: 0 });
+      const [isSubmitting, setIsSubmitting] = useState(false);
+
+      const fetchProducts = () => {
+        setLoading(true);
+        let url = `${API_BASE}/products?page=${page}&limit=${limit}`;
+        if (category) url += `&category=${encodeURIComponent(category)}`;
+        if (maxPrice) url += `&max_price=${encodeURIComponent(maxPrice)}`;
+
+        fetch(url)
+          .then(res => res.json())
+          .then(data => {
+            setProducts(data.data || []);
+            setTotal(data.total || 0);
+            setLoading(false);
+          })
+          .catch(err => {
+            showToast('Failed to load products', 'error');
+            setLoading(false);
+          });
+      };
+
+      useEffect(() => {
+        fetchProducts();
+      }, [page, limit, category, maxPrice]);
+
+      const handleCreateProduct = (e) => {
+        e.preventDefault();
+        if (!newProduct.name.trim()) {
+          showToast('Name cannot be empty', 'error');
+          return;
+        }
+        if (parseFloat(newProduct.price) <= 0) {
+          showToast('Price must be greater than 0', 'error');
+          return;
+        }
+        if (parseInt(newProduct.stock) < 0) {
+          showToast('Stock cannot be negative', 'error');
+          return;
+        }
+
+        setIsSubmitting(true);
+        fetch(`${API_BASE}/products`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: newProduct.name.trim(),
+            category: newProduct.category.trim() || null,
+            price: parseFloat(newProduct.price),
+            stock: parseInt(newProduct.stock) || 0
+          })
+        })
+          .then(async res => {
+            if (!res.ok) {
+              const err = await res.json();
+              throw new Error(err.detail || 'Failed to create product');
+            }
+            return res.json();
+          })
+          .then(() => {
+            showToast('Product created successfully!');
+            setShowModal(false);
+            setNewProduct({ name: '', category: '', price: '', stock: 0 });
+            fetchProducts();
+          })
+          .catch(err => showToast(err.message, 'error'))
+          .finally(() => setIsSubmitting(false));
+      };
+
+      const handleDeleteProduct = (id) => {
+        if (!confirm('Are you sure you want to delete this product?')) return;
+        fetch(`${API_BASE}/products/${id}`, { method: 'DELETE' })
+          .then(res => {
+            if (res.status === 204) {
+              showToast('Product deleted');
+              fetchProducts();
+            } else {
+              showToast('Delete failed', 'error');
+            }
+          })
+          .catch(() => showToast('Error deleting product', 'error'));
+      };
+
+      return (
+        <div class="space-y-6">
+          {/* Header Controls */}
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900/50 p-4 rounded-2xl border border-slate-800">
+            <div>
+              <h2 class="text-xl font-bold text-white">Product Catalog</h2>
+              <p class="text-xs text-slate-400">Total items: {total}</p>
+            </div>
+            <button
+              onClick={() => setShowModal(true)}
+              class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition shadow-lg shadow-indigo-600/20 flex items-center gap-2"
+            >
+              <span>+</span> Add Product
+            </button>
+          </div>
+
+          {/* Filters Bar */}
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-900/40 p-4 rounded-xl border border-slate-800/80">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Filter Category</label>
+              <input
+                type="text"
+                placeholder="e.g. Electronics, Tech..."
+                value={category}
+                onChange={e => { setCategory(e.target.value); setPage(1); }}
+                class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Max Price ($)</label>
+              <input
+                type="number"
+                placeholder="e.g. 100"
+                value={maxPrice}
+                onChange={e => { setMaxPrice(e.target.value); setPage(1); }}
+                class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Page Limit</label>
+              <select
+                value={limit}
+                onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}
+                class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+              >
+                <option value={5}>5 per page</option>
+                <option value={10}>10 per page</option>
+                <option value={20}>20 per page</option>
+                <option value={50}>50 per page</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Products Table */}
+          <div class="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60 shadow-xl">
+            <table class="w-full text-left text-sm text-slate-300">
+              <thead class="bg-slate-800/60 text-xs uppercase font-semibold text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="px-6 py-4">ID</th>
+                  <th class="px-6 py-4">Name</th>
+                  <th class="px-6 py-4">Category</th>
+                  <th class="px-6 py-4">Price</th>
+                  <th class="px-6 py-4">Stock</th>
+                  <th class="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/80">
+                {loading ? (
+                  <tr>
+                    <td colspan="6" class="px-6 py-8 text-center text-slate-500">Loading products...</td>
+                  </tr>
+                ) : products.length === 0 ? (
+                  <tr>
+                    <td colspan="6" class="px-6 py-8 text-center text-slate-500">No products found matching filters.</td>
+                  </tr>
+                ) : (
+                  products.map(prod => (
+                    <tr key={prod.id} class="hover:bg-slate-800/40 transition">
+                      <td class="px-6 py-4 font-mono text-xs text-indigo-400">#{prod.id}</td>
+                      <td class="px-6 py-4 font-semibold text-white">{prod.name}</td>
+                      <td class="px-6 py-4">
+                        <span class="px-2 py-1 rounded-md text-xs bg-slate-800 border border-slate-700 text-slate-300">
+                          {prod.category || 'Uncategorized'}
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 font-mono font-medium text-emerald-400">${prod.price.toFixed(2)}</td>
+                      <td class="px-6 py-4">
+                        <span class={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          prod.stock <= 5
+                            ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                            : prod.stock < 10
+                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        }`}>
+                          {prod.stock} in stock
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 text-right">
+                        <button
+                          onClick={() => handleDeleteProduct(prod.id)}
+                          class="text-xs px-2.5 py-1 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/20 transition"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          <div class="flex items-center justify-between text-xs text-slate-400 pt-2">
+            <div>
+              Showing page <span class="font-semibold text-white">{page}</span> of {Math.ceil(total / limit) || 1}
+            </div>
+            <div class="flex space-x-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed border border-slate-700 text-slate-200"
+              >
+                Previous
+              </button>
+              <button
+                disabled={page * limit >= total}
+                onClick={() => setPage(p => p + 1)}
+                class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed border border-slate-700 text-slate-200"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+
+          {/* Create Product Modal */}
+          {showModal && (
+            <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+                <h3 class="text-lg font-bold text-white mb-4">Add New Product</h3>
+                <form onSubmit={handleCreateProduct} class="space-y-4">
+                  <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Product Name *</label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="e.g. Ergonomic Keyboard"
+                      value={newProduct.name}
+                      onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
+                      class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Category</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Electronics"
+                      value={newProduct.category}
+                      onChange={e => setNewProduct({ ...newProduct, category: e.target.value })}
+                      class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-slate-300 mb-1">Price ($) *</label>
+                      <input
+                        required
+                        type="number"
+                        step="0.01"
+                        placeholder="19.99"
+                        value={newProduct.price}
+                        onChange={e => setNewProduct({ ...newProduct, price: e.target.value })}
+                        class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-slate-300 mb-1">Stock Quantity *</label>
+                      <input
+                        required
+                        type="number"
+                        min="0"
+                        placeholder="10"
+                        value={newProduct.stock}
+                        onChange={e => setNewProduct({ ...newProduct, stock: e.target.value })}
+                        class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+                  <div class="flex justify-end gap-3 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(false)}
+                      class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium text-slate-300"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white shadow-lg shadow-indigo-600/30"
+                    >
+                      {isSubmitting ? 'Saving...' : 'Save Product'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ==============================================================
+       2. CUSTOMERS TAB COMPONENT
+       ============================================================== */
+    function CustomersTab({ showToast }) {
+      const [customers, setCustomers] = useState([]);
+      const [loading, setLoading] = useState(false);
+      const [showModal, setShowModal] = useState(false);
+      const [newCustomer, setNewCustomer] = useState({ name: '', email: '' });
+      const [isSubmitting, setIsSubmitting] = useState(false);
+
+      const fetchCustomers = () => {
+        setLoading(true);
+        fetch(`${API_BASE}/customers`)
+          .then(res => res.json())
+          .then(data => {
+            setCustomers(Array.isArray(data) ? data : []);
+            setLoading(false);
+          })
+          .catch(() => {
+            showToast('Failed to load customers', 'error');
+            setLoading(false);
+          });
+      };
+
+      useEffect(() => {
+        fetchCustomers();
+      }, []);
+
+      const handleCreateCustomer = (e) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        fetch(`${API_BASE}/customers`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newCustomer)
+        })
+          .then(async res => {
+            if (res.status === 409) {
+              throw new Error('Email already registered (409 Conflict)');
+            }
+            if (res.status === 422) {
+              throw new Error('Invalid email format or empty name (422)');
+            }
+            if (!res.ok) {
+              const err = await res.json();
+              throw new Error(err.detail || 'Failed to create customer');
+            }
+            return res.json();
+          })
+          .then(() => {
+            showToast('Customer created successfully!');
+            setShowModal(false);
+            setNewCustomer({ name: '', email: '' });
+            fetchCustomers();
+          })
+          .catch(err => showToast(err.message, 'error'))
+          .finally(() => setIsSubmitting(false));
+      };
+
+      return (
+        <div class="space-y-6">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900/50 p-4 rounded-2xl border border-slate-800">
+            <div>
+              <h2 class="text-xl font-bold text-white">Registered Customers</h2>
+              <p class="text-xs text-slate-400">Total accounts: {customers.length}</p>
+            </div>
+            <button
+              onClick={() => setShowModal(true)}
+              class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition shadow-lg shadow-indigo-600/20 flex items-center gap-2"
+            >
+              <span>+</span> Add Customer
+            </button>
+          </div>
+
+          <div class="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60 shadow-xl">
+            <table class="w-full text-left text-sm text-slate-300">
+              <thead class="bg-slate-800/60 text-xs uppercase font-semibold text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="px-6 py-4">ID</th>
+                  <th class="px-6 py-4">Customer Name</th>
+                  <th class="px-6 py-4">Email Address</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/80">
+                {loading ? (
+                  <tr>
+                    <td colspan="3" class="px-6 py-8 text-center text-slate-500">Loading customers...</td>
+                  </tr>
+                ) : customers.length === 0 ? (
+                  <tr>
+                    <td colspan="3" class="px-6 py-8 text-center text-slate-500">No customers registered yet.</td>
+                  </tr>
+                ) : (
+                  customers.map(c => (
+                    <tr key={c.id} class="hover:bg-slate-800/40 transition">
+                      <td class="px-6 py-4 font-mono text-xs text-indigo-400">#{c.id}</td>
+                      <td class="px-6 py-4 font-semibold text-white">{c.name}</td>
+                      <td class="px-6 py-4 font-mono text-slate-300">{c.email}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Add Customer Modal */}
+          {showModal && (
+            <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+                <h3 class="text-lg font-bold text-white mb-4">Add Customer</h3>
+                <form onSubmit={handleCreateCustomer} class="space-y-4">
+                  <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Full Name *</label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="Jane Doe"
+                      value={newCustomer.name}
+                      onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                      class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Email Address *</label>
+                    <input
+                      required
+                      type="email"
+                      placeholder="jane.doe@example.com"
+                      value={newCustomer.email}
+                      onChange={e => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                      class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    />
+                    <p class="text-[11px] text-slate-500 mt-1">Must be a valid format. Duplicate emails will return 409 Conflict.</p>
+                  </div>
+                  <div class="flex justify-end gap-3 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(false)}
+                      class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium text-slate-300"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white shadow-lg shadow-indigo-600/30"
+                    >
+                      {isSubmitting ? 'Registering...' : 'Register Customer'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ==============================================================
+       3. ORDERS TAB COMPONENT
+       ============================================================== */
+    function OrdersTab({ showToast }) {
+      const [orders, setOrders] = useState([]);
+      const [total, setTotal] = useState(0);
+      const [page, setPage] = useState(1);
+      const [limit, setLimit] = useState(10);
+      const [loading, setLoading] = useState(false);
+
+      // Customer & product lists for modal
+      const [customers, setCustomers] = useState([]);
+      const [availableProducts, setAvailableProducts] = useState([]);
+      const [showModal, setShowModal] = useState(false);
+
+      // New order state
+      const [selectedCustomerId, setSelectedCustomerId] = useState('');
+      const [selectedItems, setSelectedItems] = useState([{ product_id: '', quantity: 1 }]);
+      const [isSubmitting, setIsSubmitting] = useState(false);
+
+      const fetchOrders = () => {
+        setLoading(true);
+        fetch(`${API_BASE}/orders?page=${page}&limit=${limit}`)
+          .then(res => res.json())
+          .then(data => {
+            setOrders(data.data || []);
+            setTotal(data.total || 0);
+            setLoading(false);
+          })
+          .catch(() => {
+            showToast('Failed to load orders', 'error');
+            setLoading(false);
+          });
+      };
+
+      useEffect(() => {
+        fetchOrders();
+      }, [page, limit]);
+
+      const openCreateModal = () => {
+        // Fetch customers and products for selection
+        Promise.all([
+          fetch(`${API_BASE}/customers`).then(r => r.json()),
+          fetch(`${API_BASE}/products?limit=100`).then(r => r.json())
+        ]).then(([custList, prodData]) => {
+          setCustomers(custList || []);
+          setAvailableProducts(prodData.data || []);
+          if (custList && custList.length > 0) setSelectedCustomerId(custList[0].id);
+          setShowModal(true);
+        }).catch(() => showToast('Failed to load customers or products for order', 'error'));
+      };
+
+      const handleAddItemRow = () => {
+        setSelectedItems([...selectedItems, { product_id: '', quantity: 1 }]);
+      };
+
+      const handleRemoveItemRow = (index) => {
+        setSelectedItems(selectedItems.filter((_, i) => i !== index));
+      };
+
+      const handleItemChange = (index, field, value) => {
+        const next = [...selectedItems];
+        next[index][field] = value;
+        setSelectedItems(next);
+      };
+
+      const handleCreateOrder = (e) => {
+        e.preventDefault();
+        if (!selectedCustomerId) {
+          showToast('Please select a customer', 'error');
+          return;
+        }
+
+        const validItems = selectedItems.filter(item => item.product_id && item.quantity > 0);
+        if (validItems.length === 0) {
+          showToast('Please add at least one valid product item', 'error');
+          return;
+        }
+
+        setIsSubmitting(true);
+        fetch(`${API_BASE}/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer_id: parseInt(selectedCustomerId),
+            items: validItems.map(it => ({
+              product_id: parseInt(it.product_id),
+              quantity: parseInt(it.quantity)
+            }))
+          })
+        })
+          .then(async res => {
+            if (!res.ok) {
+              const err = await res.json();
+              throw new Error(err.detail || 'Failed to create order');
+            }
+            return res.json();
+          })
+          .then(() => {
+            showToast('Order placed successfully! Stock deducted.');
+            setShowModal(false);
+            setSelectedItems([{ product_id: '', quantity: 1 }]);
+            fetchOrders();
+          })
+          .catch(err => showToast(err.message, 'error'))
+          .finally(() => setIsSubmitting(false));
+      };
+
+      return (
+        <div class="space-y-6">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900/50 p-4 rounded-2xl border border-slate-800">
+            <div>
+              <h2 class="text-xl font-bold text-white">Orders & Atoms</h2>
+              <p class="text-xs text-slate-400">Total orders: {total}</p>
+            </div>
+            <button
+              onClick={openCreateModal}
+              class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition shadow-lg shadow-indigo-600/20 flex items-center gap-2"
+            >
+              <span>+</span> Create Order
+            </button>
+          </div>
+
+          <div class="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/60 shadow-xl">
+            <table class="w-full text-left text-sm text-slate-300">
+              <thead class="bg-slate-800/60 text-xs uppercase font-semibold text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="px-6 py-4">Order ID</th>
+                  <th class="px-6 py-4">Customer ID</th>
+                  <th class="px-6 py-4">Created Date</th>
+                  <th class="px-6 py-4">Status</th>
+                  <th class="px-6 py-4">Order Atoms (Items)</th>
+                  <th class="px-6 py-4 text-right">Total Price</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/80">
+                {loading ? (
+                  <tr>
+                    <td colspan="6" class="px-6 py-8 text-center text-slate-500">Loading orders...</td>
+                  </tr>
+                ) : orders.length === 0 ? (
+                  <tr>
+                    <td colspan="6" class="px-6 py-8 text-center text-slate-500">No orders placed yet.</td>
+                  </tr>
+                ) : (
+                  orders.map(o => {
+                    const items = o.atoms || o.items || [];
+                    const orderTotal = items.reduce((acc, it) => acc + (it.quantity * it.unit_price), 0);
+                    return (
+                      <tr key={o.id} class="hover:bg-slate-800/40 transition">
+                        <td class="px-6 py-4 font-mono text-xs text-indigo-400 font-semibold">#{o.id}</td>
+                        <td class="px-6 py-4 text-xs font-mono text-slate-300">Customer #{o.customer_id}</td>
+                        <td class="px-6 py-4 text-xs text-slate-400">{new Date(o.created_at).toLocaleString()}</td>
+                        <td class="px-6 py-4">
+                          <span class="px-2 py-0.5 rounded-full text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase font-medium">
+                            {o.status}
+                          </span>
+                        </td>
+                        <td class="px-6 py-4">
+                          <div class="flex flex-wrap gap-1.5 max-w-sm">
+                            {items.map(item => (
+                              <span key={item.id} class="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-xs text-slate-200">
+                                Product #{item.product_id} × {item.quantity} (${item.unit_price.toFixed(2)})
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td class="px-6 py-4 font-mono font-bold text-emerald-400 text-right">
+                          ${orderTotal.toFixed(2)}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Modal to Create Order */}
+          {showModal && (
+            <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+                <h3 class="text-lg font-bold text-white mb-2">Create New Order</h3>
+                <p class="text-xs text-slate-400 mb-4">Stock will be verified and deducted atomically.</p>
+                <form onSubmit={handleCreateOrder} class="space-y-4">
+                  <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Select Customer *</label>
+                    <select
+                      required
+                      value={selectedCustomerId}
+                      onChange={e => setSelectedCustomerId(e.target.value)}
+                      class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    >
+                      {customers.map(c => (
+                        <option key={c.id} value={c.id}>{c.name} ({c.email})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <div class="flex justify-between items-center mb-2">
+                      <label class="block text-xs font-medium text-slate-300">Order Atoms (Items) *</label>
+                      <button
+                        type="button"
+                        onClick={handleAddItemRow}
+                        class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold"
+                      >
+                        + Add Item
+                      </button>
+                    </div>
+
+                    <div class="space-y-2">
+                      {selectedItems.map((item, idx) => (
+                        <div key={idx} class="flex gap-2 items-center">
+                          <select
+                            required
+                            value={item.product_id}
+                            onChange={e => handleItemChange(idx, 'product_id', e.target.value)}
+                            class="flex-1 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-indigo-500"
+                          >
+                            <option value="">Select a product...</option>
+                            {availableProducts.map(p => (
+                              <option key={p.id} value={p.id}>
+                                {p.name} - ${p.price} (Stock: {p.stock})
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={e => handleItemChange(idx, 'quantity', e.target.value)}
+                            class="w-20 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-indigo-500"
+                            placeholder="Qty"
+                          />
+                          {selectedItems.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveItemRow(idx)}
+                              class="text-rose-400 hover:text-rose-300 p-1 text-sm"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(false)}
+                      class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium text-slate-300"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white shadow-lg shadow-indigo-600/30"
+                    >
+                      {isSubmitting ? 'Placing Order...' : 'Place Order'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ==============================================================
+       4. ANALYTICS TAB COMPONENT
+       ============================================================== */
+    function AnalyticsTab({ showToast }) {
+      const [productSales, setProductSales] = useState([]);
+      const [topCustomers, setTopCustomers] = useState([]);
+      const [lowStockProducts, setLowStockProducts] = useState([]);
+      const [threshold, setThreshold] = useState(10);
+      const [loading, setLoading] = useState(false);
+
+      const fetchAnalytics = () => {
+        setLoading(true);
+        Promise.all([
+          fetch(`${API_BASE}/analytics/product-sales`).then(r => r.json()),
+          fetch(`${API_BASE}/analytics/top-customers`).then(r => r.json()),
+          fetch(`${API_BASE}/analytics/low-stock?threshold=${threshold}`).then(r => r.json())
+        ])
+          .then(([salesData, topData, lowData]) => {
+            setProductSales(Array.isArray(salesData) ? salesData : []);
+            setTopCustomers(Array.isArray(topData) ? topData : []);
+            setLowStockProducts(Array.isArray(lowData) ? lowData : []);
+            setLoading(false);
+          })
+          .catch(() => {
+            showToast('Failed to load analytics', 'error');
+            setLoading(false);
+          });
+      };
+
+      useEffect(() => {
+        fetchAnalytics();
+      }, [threshold]);
+
+      return (
+        <div class="space-y-8">
+          {/* Section 1: Product Sales & Revenue */}
+          <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-800 shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+              <div>
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                  <span>💰</span> Product Revenue & Units Sold
+                </h3>
+                <p class="text-xs text-slate-400">Aggregated sales metrics per product</p>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-slate-300">
+                <thead class="bg-slate-800/60 text-xs uppercase font-semibold text-slate-400 border-b border-slate-800">
+                  <tr>
+                    <th class="px-6 py-3">Product</th>
+                    <th class="px-6 py-3">Units Sold</th>
+                    <th class="px-6 py-3 text-right">Total Revenue</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/80">
+                  {productSales.length === 0 ? (
+                    <tr>
+                      <td colspan="3" class="px-6 py-6 text-center text-slate-500">No sales data recorded.</td>
+                    </tr>
+                  ) : (
+                    productSales.map(item => (
+                      <tr key={item.product_id} class="hover:bg-slate-800/30 transition">
+                        <td class="px-6 py-3.5 font-semibold text-white">
+                          {item.product_name || item.name}
+                          <span class="ml-2 font-mono text-xs text-slate-500">#{item.product_id}</span>
+                        </td>
+                        <td class="px-6 py-3.5 font-mono text-slate-200">
+                          <span class="px-2.5 py-1 rounded-md bg-slate-800 text-xs border border-slate-700">
+                            {item.units_sold} units
+                          </span>
+                        </td>
+                        <td class="px-6 py-3.5 font-mono font-bold text-emerald-400 text-right">
+                          ${(item.total_revenue || item.revenue || 0).toFixed(2)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Section 2: Top 5 Customers & Section 3: Low Stock Alerts */}
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Top 5 Customers */}
+            <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col justify-between">
+              <div>
+                <h3 class="text-lg font-bold text-white flex items-center gap-2 mb-1">
+                  <span>🏆</span> Top 5 Customers by Spend
+                </h3>
+                <p class="text-xs text-slate-400 mb-4">Highest spending customers lifetime</p>
+
+                <div class="space-y-3">
+                  {topCustomers.length === 0 ? (
+                    <div class="text-center py-8 text-slate-500 text-sm">No customer orders yet.</div>
+                  ) : (
+                    topCustomers.map((cust, idx) => (
+                      <div
+                        key={cust.customer_id}
+                        class="flex items-center justify-between p-3.5 rounded-xl bg-slate-800/40 border border-slate-800 hover:border-slate-700 transition"
+                      >
+                        <div class="flex items-center gap-3">
+                          <div class={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ${
+                            idx === 0 ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30' :
+                            idx === 1 ? 'bg-slate-300/20 text-slate-200 border border-slate-300/30' :
+                            idx === 2 ? 'bg-amber-700/20 text-amber-500 border border-amber-700/30' :
+                            'bg-slate-800 text-slate-400'
+                          }`}>
+                            #{idx + 1}
+                          </div>
+                          <div>
+                            <div class="text-sm font-semibold text-white">{cust.customer_name || cust.name}</div>
+                            <div class="text-xs text-slate-500 font-mono">{cust.email}</div>
+                          </div>
+                        </div>
+                        <div class="text-right">
+                          <div class="font-mono font-bold text-emerald-400 text-sm">
+                            ${(cust.total_spend || 0).toFixed(2)}
+                          </div>
+                          <div class="text-[10px] text-slate-500 uppercase tracking-wider">Total Spent</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Low Stock Alerts */}
+            <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-800 shadow-xl flex flex-col justify-between">
+              <div>
+                <div class="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                      <span>⚠️</span> Low Stock Alerts
+                    </h3>
+                    <p class="text-xs text-slate-400">Products below inventory threshold</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <label class="text-xs text-slate-400">Threshold:</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={threshold}
+                      onChange={e => setThreshold(Number(e.target.value) || 0)}
+                      class="w-16 px-2 py-1 rounded bg-slate-800 border border-slate-700 text-xs text-white text-center font-mono focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div class="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+                  {lowStockProducts.length === 0 ? (
+                    <div class="text-center py-8 text-slate-500 text-sm">
+                      All products have stock at or above {threshold}.
+                    </div>
+                  ) : (
+                    lowStockProducts.map(p => (
+                      <div
+                        key={p.id}
+                        class="flex items-center justify-between p-3 rounded-xl bg-rose-950/20 border border-rose-900/30"
+                      >
+                        <div>
+                          <div class="text-sm font-semibold text-white">{p.name}</div>
+                          <div class="text-xs text-slate-400">{p.category || 'General'} · ${p.price}</div>
+                        </div>
+                        <div class="px-3 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                          {p.stock} remaining
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
